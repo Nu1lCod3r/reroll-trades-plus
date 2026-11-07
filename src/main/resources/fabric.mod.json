@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "reroll_trades_plus",
+	"version": "${version}",
+	"name": "Reroll Trades Plus",
+	"description": "Adds a Reroll button to the villager trading screen that re-rolls the villager's trades.",
+	"authors": [
+		"sapeg"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/reroll_trades_plus/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.nullcoder.rerolltradesplus.RerollTradesPlus"
+		],
+		"client": [
+			"com.nullcoder.rerolltradesplus.client.RerollTradesPlusClient"
+		]
+	},
+	"mixins": [
+		"reroll_trades_plus.mixins.json",
+		{
+			"config": "reroll_trades_plus.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

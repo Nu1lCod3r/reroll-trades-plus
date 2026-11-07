@@ -1,0 +1,6 @@
+{
+	"button.reroll_trades_plus.reroll": "Reroll",
+	"tooltip.reroll_trades_plus.reroll": "Reroll trades (cost: %s emeralds)",
+	"message.reroll_trades_plus.no_trades": "This villager has no trades to reroll",
+	"message.reroll_trades_plus.not_enough_emeralds": "Not enough emeralds to reroll (need %s)"
+}
