@@ -1,0 +1,11 @@
+{
+	"key.reroll_plus_plus.reroll": "Реролл сделок",
+	"button.reroll_plus_plus.reroll": "Обновить",
+	"button.reroll_plus_plus.enchant": "Обновить зачарования",
+	"tooltip.reroll_plus_plus.reroll": "Обновить сделки (цена: %s изумр.)",
+	"tooltip.reroll_plus_plus.enchant": "Обновить зачарования (1 лазурит)",
+	"message.reroll_plus_plus.no_trades": "У этого жителя нет сделок для обновления",
+	"message.reroll_plus_plus.not_enough_emeralds": "Недостаточно изумрудов для обновления (нужно %s)",
+	"message.reroll_plus_plus.refused": "Торговец отказался обновлять сделки!",
+	"message.reroll_plus_plus.need_lapis": "Положите лазурит в стол зачарований, чтобы обновить зачарования"
+}
