@@ -10,4 +10,4 @@ pluginManagement {
 }
 
 // Should match your modid
-rootProject.name = 'reroll-trades-plus'
+rootProject.name = 'reroll-plus-plus'

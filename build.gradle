@@ -15,7 +15,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"reroll_trades_plus" {
+		"reroll_plus_plus" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

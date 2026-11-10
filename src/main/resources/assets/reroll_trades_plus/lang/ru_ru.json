@@ -1,6 +1,0 @@
-{
-	"button.reroll_trades_plus.reroll": "Обновить",
-	"tooltip.reroll_trades_plus.reroll": "Обновить сделки (цена: %s изумр.)",
-	"message.reroll_trades_plus.no_trades": "У этого жителя нет сделок для обновления",
-	"message.reroll_trades_plus.not_enough_emeralds": "Недостаточно изумрудов для обновления (нужно %s)"
-}
