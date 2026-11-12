@@ -2,8 +2,12 @@ package com.nullcoder.rerollplusplus;
 
 import com.nullcoder.rerollplusplus.mixin.AbstractVillagerInvoker;
 import com.nullcoder.rerollplusplus.mixin.MerchantMenuAccessor;
+import com.nullcoder.rerollplusplus.mixin.MerchantOfferAccessor;
 import com.nullcoder.rerollplusplus.mixin.VillagerInvoker;
 import com.nullcoder.rerollplusplus.mixin.WanderingTraderInvoker;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.WeakHashMap;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -23,6 +27,7 @@ import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.trading.Merchant;
+import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.item.trading.TradeSet;
 import org.slf4j.Logger;
@@ -31,6 +36,10 @@ import org.slf4j.LoggerFactory;
 public class RerollTradesPlus implements ModInitializer {
 	public static final String MOD_ID = "reroll_plus_plus";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	/** Minimum interval between reroll attempts per player: held keys or macros must not spam packets, sounds and particles. */
+	private static final long REROLL_COOLDOWN_NANOS = 500_000_000L;
+	private static final WeakHashMap<ServerPlayer, Long> LAST_REROLL_AT = new WeakHashMap<>();
 
 	@Override
 	public void onInitialize() {
@@ -46,6 +55,15 @@ public class RerollTradesPlus implements ModInitializer {
 	 * its trades level by level, so we replay every trade set up to its level.
 	 */
 	private static void rerollTrades(final ServerPlayer player) {
+		// Rate limit first: rerolling is a deliberate action, so a held hotkey or macro must not
+		// hammer the server with packets (each one broadcasts sounds and particles to nearby players).
+		long now = System.nanoTime();
+		Long lastRerollAt = LAST_REROLL_AT.get(player);
+		if (lastRerollAt != null && now - lastRerollAt < REROLL_COOLDOWN_NANOS) {
+			return;
+		}
+		LAST_REROLL_AT.put(player, now);
+
 		AbstractContainerMenu openMenu = player.containerMenu;
 		if (!(openMenu instanceof MerchantMenu menu)) {
 			return;
@@ -60,7 +78,7 @@ public class RerollTradesPlus implements ModInitializer {
 		if (!(entity.level() instanceof ServerLevel serverLevel)) {
 			return;
 		}
-		if (player.isSpectator() || !menu.stillValid(player)) {
+		if (player.isSpectator() || !entity.isAlive() || !menu.stillValid(player)) {
 			return;
 		}
 
@@ -95,6 +113,8 @@ public class RerollTradesPlus implements ModInitializer {
 			VillagerData villagerData = villager.getVillagerData();
 			VillagerProfession profession = villagerData.profession().value();
 
+			// Snapshot before wiping: identical trades must keep their sold-out state (see carryTradeState).
+			List<MerchantOffer> oldOffers = List.copyOf(villager.getOffers());
 			villager.setOffers(new MerchantOffers());
 			for (int lvl = 1; lvl <= villagerData.level(); lvl++) {
 				ResourceKey<TradeSet> tradeSet = profession.getTrades(lvl);
@@ -102,14 +122,17 @@ public class RerollTradesPlus implements ModInitializer {
 					((AbstractVillagerInvoker) villager).rerollTradesPlus$invokeAddOffersFromTradeSet(serverLevel, villager.getOffers(), tradeSet);
 				}
 			}
+			carryTradeState(oldOffers, villager.getOffers());
 
 			villager.setTradingPlayer(player);
 			// Re-applies reputation/hero discounts and syncs the new offers to the client.
 			((VillagerInvoker) villager).rerollTradesPlus$invokeUpdateSpecialPrices(player);
 		} else {
 			WanderingTrader trader = (WanderingTrader) merchant;
+			List<MerchantOffer> oldOffers = List.copyOf(trader.getOffers());
 			trader.getOffers().clear();
 			((WanderingTraderInvoker) trader).rerollTradesPlus$invokeUpdateTrades(serverLevel);
+			carryTradeState(oldOffers, trader.getOffers());
 			player.sendMerchantOffers(menu.containerId, trader.getOffers(), 1, trader.getVillagerXp(), menu.showProgressBar(), menu.canRestock());
 		}
 
@@ -125,6 +148,34 @@ public class RerollTradesPlus implements ModInitializer {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Preserves trade state across a reroll: an offer identical to a previous one (same costs
+	 * and result) keeps its uses and demand, so a reroll changes the set of trades but never
+	 * restocks them. Without this, rerolling would unlock trades the player has sold out and
+	 * reset demand-driven price increases — an infinite restock for the price of one reroll.
+	 * Offers new to the set start fresh, as vanilla restock never applies to them either.
+	 */
+	private static void carryTradeState(final List<MerchantOffer> oldOffers, final MerchantOffers newOffers) {
+		List<MerchantOffer> unmatched = new ArrayList<>(oldOffers);
+		for (MerchantOffer offer : newOffers) {
+			for (int i = 0; i < unmatched.size(); i++) {
+				MerchantOffer old = unmatched.get(i);
+				if (sameTrade(old, offer)) {
+					unmatched.remove(i);
+					((MerchantOfferAccessor) offer).rerollTradesPlus$setUses(Math.min(old.getUses(), offer.getMaxUses()));
+					((MerchantOfferAccessor) offer).rerollTradesPlus$setDemand(old.getDemand());
+					break;
+				}
+			}
+		}
+	}
+
+	private static boolean sameTrade(final MerchantOffer a, final MerchantOffer b) {
+		return a.getItemCostA().equals(b.getItemCostA())
+			&& a.getItemCostB().equals(b.getItemCostB())
+			&& a.getResult().equals(b.getResult());
 	}
 
 	public static Identifier id(final String path) {
