@@ -5,6 +5,10 @@ build/
 out/
 classes/
 
+# zcode workspace
+
+.zcode/
+
 # eclipse
 
 *.launch

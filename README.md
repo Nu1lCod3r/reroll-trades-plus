@@ -8,7 +8,7 @@
 
 ![Minecraft](https://img.shields.io/badge/Minecraft-26.3-62a355)
 ![Fabric](https://img.shields.io/badge/Fabric-0.20.1-d3b06e)
-![Version](https://img.shields.io/badge/version-2.0--beta-orange)
+![Version](https://img.shields.io/badge/version-2.0.1--beta-orange)
 ![License](https://img.shields.io/badge/license-CC0--1.0-lightgrey)
 
 </div>
@@ -72,12 +72,14 @@
 
 Никакие данные о сделках не хранятся модом — используются только механизмы ванили, поэтому реролл совместим с датапаками, меняющими торговлю.
 
+Мод выпускается двумя сборками — **Fabric** (корень репозитория) и **NeoForge** (папка `neoforge/`): серверный код, миксины, ассеты и механики у них общие, отличается только входная точка, регистрация payload'а и хоткея.
+
 ## Установка
 
-1. Установите [Fabric Loader](https://fabricmc.net/use/) для Minecraft 26.3.
-2. Положите в `mods`:
-   - [Fabric API](https://modrinth.com/mod/fabric-api) `0.165.2+26.3` или новее;
-   - `reroll-plus-plus-2.0-beta.jar` (см. [Releases](../../releases)).
+1. Установите [Fabric Loader](https://fabricmc.net/use/) **или** [NeoForge](https://neoforged.net/) для Minecraft 26.3.
+2. Положите в `mods` соответствующую сборку мода (см. [Releases](../../releases)):
+   - Fabric: `reroll-plus-plus-<версия>.jar` + [Fabric API](https://modrinth.com/mod/fabric-api) `0.165.2+26.3` или новее;
+   - NeoForge: `reroll-plus-plus-neoforge-<версия>.jar` — дополнительно ничего не нужно.
 3. Мод нужен и на клиенте, и на сервере. В одиночной игре достаточно клиента.
 
 ## Сборка из исходников
@@ -89,7 +91,9 @@
 gradlew.bat build      # Windows
 ```
 
-Готовый jar появится в `build/libs/reroll-plus-plus-2.0-beta.jar`.
+Готовые jar:
+- **Fabric** (в корне репозитория): `build/libs/reroll-plus-plus-<версия>.jar`;
+- **NeoForge** (в папке `neoforge/`, своя сборка той же командой): `neoforge/build/libs/reroll-plus-plus-neoforge-<версия>.jar`.
 
 > Первый запуск скачивает Minecraft, маппинги и декомпилирует исходники — это занимает несколько минут.
 
@@ -115,7 +119,7 @@ src/main/resources/assets/reroll_plus_plus/
 
 ## English (short)
 
-**Reroll Plus Plus** adds a ↻ button to the villager trading screen and the enchanting table (Minecraft 26.3, Fabric). One click regenerates the villager's full offer set via vanilla `TradeSet` mechanics, or rerolls all three enchantment offers for 1 lapis lazuli. Rerolling costs emeralds — the price scales with the villager's trade level (1/2/4/8/16); wandering traders cost 1 emerald. Merchants may refuse (up to 20% at Master level, 10% for wandering traders) — nothing is charged on refusal. Hotkey: **R** (remappable). The buttons only appear when the server has the mod; all validation happens server-side.
+**Reroll Plus Plus** adds a ↻ button to the villager trading screen and the enchanting table (Minecraft 26.3, Fabric & NeoForge). One click regenerates the villager's full offer set via vanilla `TradeSet` mechanics, or rerolls all three enchantment offers for 1 lapis lazuli. Rerolling costs emeralds — the price scales with the villager's trade level (1/2/4/8/16); wandering traders cost 1 emerald. Merchants may refuse (up to 20% at Master level, 10% for wandering traders) — nothing is charged on refusal. Hotkey: **R** (remappable). The buttons only appear when the server has the mod; all validation happens server-side.
 
 ## Лицензия
 

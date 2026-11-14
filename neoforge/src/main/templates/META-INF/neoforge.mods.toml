@@ -1,0 +1,28 @@
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="NullCod3r"
+description='''Reroll buttons for villager trades and the enchanting table. Кнопки реролла сделок жителей и зачарований.'''
+
+[[mixins]]
+config = "reroll_plus_plus.mixins.json"
+
+[[mixins]]
+config = "reroll_plus_plus.client.mixins.json"
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="[${neo_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"

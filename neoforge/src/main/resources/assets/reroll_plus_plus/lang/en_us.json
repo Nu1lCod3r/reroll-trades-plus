@@ -1,0 +1,11 @@
+{
+	"key.reroll_plus_plus.reroll": "Reroll Trades",
+	"button.reroll_plus_plus.reroll": "Reroll",
+	"button.reroll_plus_plus.enchant": "Reroll Enchantments",
+	"tooltip.reroll_plus_plus.reroll": "Reroll trades (cost: %s emeralds)",
+	"tooltip.reroll_plus_plus.enchant": "Reroll enchantments (1 lapis lazuli)",
+	"message.reroll_plus_plus.no_trades": "This villager has no trades to reroll",
+	"message.reroll_plus_plus.not_enough_emeralds": "Not enough emeralds to reroll (need %s)",
+	"message.reroll_plus_plus.refused": "The merchant refuses to reroll their trades!",
+	"message.reroll_plus_plus.need_lapis": "Put lapis lazuli into the enchanting table to reroll"
+}
