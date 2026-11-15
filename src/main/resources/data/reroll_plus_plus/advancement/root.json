@@ -1,0 +1,26 @@
+{
+	"criteria": {
+		"rerolled": {
+			"trigger": "reroll_plus_plus:reroll"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"background": "minecraft:gui/advancements/backgrounds/adventure",
+		"icon": {
+			"id": "reroll_plus_plus:reroll_token"
+		},
+		"show_toast": false,
+		"title": {
+			"translate": "advancements.reroll_plus_plus.root.title"
+		},
+		"description": {
+			"translate": "advancements.reroll_plus_plus.root.description"
+		}
+	},
+	"requirements": [
+		[
+			"rerolled"
+		]
+	]
+}

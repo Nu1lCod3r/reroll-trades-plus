@@ -1,0 +1,33 @@
+{
+	"parent": "reroll_plus_plus:root",
+	"criteria": {
+		"rerolled": {
+			"trigger": "reroll_plus_plus:reroll",
+			"conditions": {
+				"total_count": {
+					"min": 100
+				}
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:amethyst_shard"
+		},
+		"frame": "challenge",
+		"title": {
+			"translate": "advancements.reroll_plus_plus.hundred.title"
+		},
+		"description": {
+			"translate": "advancements.reroll_plus_plus.hundred.description"
+		}
+	},
+	"requirements": [
+		[
+			"rerolled"
+		]
+	],
+	"rewards": {
+		"experience": 100
+	}
+}

@@ -1,5 +1,6 @@
 package com.nullcoder.rerollplusplus;
 
+import com.nullcoder.rerollplusplus.client.RerollTradesPlusClient;
 import com.nullcoder.rerollplusplus.mixin.AbstractVillagerInvoker;
 import com.nullcoder.rerollplusplus.mixin.MerchantMenuAccessor;
 import com.nullcoder.rerollplusplus.mixin.MerchantOfferAccessor;
@@ -16,6 +17,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerData;
@@ -23,12 +26,18 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.item.trading.TradeSet;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.HandlerThread;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -45,26 +54,38 @@ public class RerollTradesPlus {
 	private static final WeakHashMap<ServerPlayer, Long> LAST_REROLL_AT = new WeakHashMap<>();
 
 	public RerollTradesPlus(final IEventBus modEventBus) {
+		RerollConfig.load(FMLPaths.CONFIGDIR.get());
+		RerollItems.register();
+
 		modEventBus.addListener(RegisterPayloadHandlersEvent.class, RerollTradesPlus::onRegisterPayloads);
+		NeoForge.EVENT_BUS.addListener(BuildCreativeModeTabContentsEvent.class, event -> {
+			if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+				event.accept(RerollItems.REROLL_TOKEN);
+			}
+		});
+
 		LOGGER.info("Reroll Plus Plus initialized");
 	}
 
 	/**
-	 * Registers the serverbound reroll payload. The handler runs on the server thread
-	 * (MAIN), mirroring the Fabric ServerPlayNetworking behavior.
+	 * Registers both payloads. The reroll handler runs on the server thread (MAIN), mirroring
+	 * the Fabric ServerPlayNetworking behavior; the price sync runs on the client thread (MAIN).
 	 */
 	private static void onRegisterPayloads(final RegisterPayloadHandlersEvent event) {
 		event.registrar("1")
 			.executesOn(HandlerThread.MAIN)
 			.playToServer(RerollTradesPayload.TYPE, RerollTradesPayload.CODEC,
-				(payload, context) -> rerollTrades((ServerPlayer) context.player()));
+				(payload, context) -> rerollTrades((ServerPlayer) context.player()))
+			.playToClient(RerollPriceSyncPayload.TYPE, RerollPriceSyncPayload.CODEC,
+				(payload, context) -> RerollTradesPlusClient.acceptPrice(payload.containerId(), payload.price()));
 	}
 
 	/**
-	 * Regenerates the offers of the merchant the player is currently trading with,
-	 * charging emeralds based on the merchant's trade level. Supports villagers and
-	 * wandering traders. Mirrors vanilla offer generation: a fresh villager accumulates
-	 * its trades level by level, so we replay every trade set up to its level.
+	 * Regenerates the offers of the merchant the player is currently trading with, charging
+	 * emeralds based on the merchant's trade level. Supports villagers and wandering traders.
+	 * 3.0 extras: golden rerolls (jackpot: no refusal + one elite 1-emerald offer), merchant
+	 * fatigue (repeated rerolls of one merchant in a day cost more), the reroll token (rescues
+	 * a failing reroll), explorer map re-targeting for cartographers, and an advancement/stat trail.
 	 */
 	private static void rerollTrades(final ServerPlayer player) {
 		// Rate limit first: rerolling is a deliberate action, so a held hotkey or macro must not
@@ -83,8 +104,13 @@ public class RerollTradesPlus {
 
 		Merchant merchant = ((MerchantMenuAccessor) menu).rerollTradesPlus$getTrader();
 		boolean isVillager = merchant instanceof Villager;
-		if (!isVillager && !(merchant instanceof WanderingTrader)) {
+		if (isVillager && !RerollConfig.INSTANCE.enableVillagerReroll) {
 			return;
+		}
+		if (!isVillager) {
+			if (!(merchant instanceof WanderingTrader) || !RerollConfig.INSTANCE.enableWanderingTraderReroll) {
+				return;
+			}
 		}
 		Entity entity = (Entity) merchant;
 		if (!(entity.level() instanceof ServerLevel serverLevel)) {
@@ -105,21 +131,44 @@ public class RerollTradesPlus {
 			}
 		}
 
-		// The merchant may refuse: the higher their trade level, the likelier a refusal. Nothing is charged.
-		double refusal = isVillager ? RerollOdds.refusalChance(level) : RerollOdds.WANDERING_TRADER_REFUSAL;
-		if (entity.getRandom().nextDouble() < refusal) {
-			serverLevel.playSound(null, entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
-			serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, entity.getX(), entity.getY() + 1.6, entity.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
-			player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".refused"), true);
-			return;
+		RerollConfig config = RerollConfig.INSTANCE;
+
+		// Golden reroll: the jackpot. The merchant cannot refuse, and one fresh offer becomes elite.
+		boolean golden = config.enableGoldenReroll && entity.getRandom().nextDouble() < config.goldenRerollChance;
+		boolean usedToken = false;
+
+		// The merchant may refuse: the higher their trade level, the likelier a refusal.
+		// A reroll token overrules the refusal (and is consumed instead of emeralds).
+		if (!golden) {
+			double refusal = (isVillager ? RerollOdds.refusalChance(level) : RerollOdds.WANDERING_TRADER_REFUSAL)
+				* config.refusalChanceScale;
+			if (entity.getRandom().nextDouble() < refusal) {
+				if (config.enableRerollToken && consumeToken(player)) {
+					usedToken = true;
+					player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".token_refusal"), true);
+				} else {
+					serverLevel.playSound(null, entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+					serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, entity.getX(), entity.getY() + 1.6, entity.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
+					player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".refused"), true);
+					return;
+				}
+			}
 		}
 
-		int cost = RerollCost.forLevel(level);
-		if (!RerollCost.tryCharge(player, cost)) {
-			player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".not_enough_emeralds", cost), true);
-			return;
+		// Fatigue: rerolling the same merchant within one game day smoothly raises the price.
+		int basePrice = RerollCost.forLevel(level);
+		int price = RerollFatigue.price(serverLevel, merchant, basePrice);
+		if (!usedToken && !RerollCost.tryCharge(player, price)) {
+			if (config.enableRerollToken && consumeToken(player)) {
+				usedToken = true;
+				player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".token_used"), true);
+			} else {
+				player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".not_enough_emeralds", price), true);
+				return;
+			}
 		}
 
+		boolean retargetedMap = false;
 		if (isVillager) {
 			Villager villager = (Villager) merchant;
 			VillagerData villagerData = villager.getVillagerData();
@@ -136,21 +185,79 @@ public class RerollTradesPlus {
 			}
 			carryTradeState(oldOffers, villager.getOffers());
 
+			// Cartographer reroll extra: explorer maps lead to a different structure instance.
+			if (config.enableMapReroll) {
+				retargetedMap = ExplorerMaps.retarget(serverLevel, villager.getOffers(), entity.blockPosition(), entity.getRandom());
+			}
+
 			villager.setTradingPlayer(player);
 			// Re-applies reputation/hero discounts and syncs the new offers to the client.
 			((VillagerInvoker) villager).rerollTradesPlus$invokeUpdateSpecialPrices(player);
+			if (golden) {
+				makeElite(villager.getOffers(), entity.getRandom());
+			}
 		} else {
 			WanderingTrader trader = (WanderingTrader) merchant;
 			List<MerchantOffer> oldOffers = List.copyOf(trader.getOffers());
 			trader.getOffers().clear();
 			((WanderingTraderInvoker) trader).rerollTradesPlus$invokeUpdateTrades(serverLevel);
 			carryTradeState(oldOffers, trader.getOffers());
+			if (golden) {
+				makeElite(trader.getOffers(), entity.getRandom());
+			}
 			player.sendMerchantOffers(menu.containerId, trader.getOffers(), 1, trader.getVillagerXp(), menu.showProgressBar(), menu.canRestock());
 		}
 
-		// Celebration: villager voice + happy particles around the merchant.
-		serverLevel.playSound(null, entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
-		serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY() + 1.2, entity.getZ(), 12, 0.4, 0.5, 0.4, 0.0);
+		// Fatigue and the button price for the NEXT reroll.
+		RerollFatigue.bump(serverLevel, merchant);
+		int nextPrice = RerollFatigue.price(serverLevel, merchant, basePrice);
+		PacketDistributor.sendToPlayer(player, new RerollPriceSyncPayload(menu.containerId, nextPrice));
+
+		// Statistics and advancement trail.
+		RerollItems.awardRerollStat(player);
+		int totalCount = RerollItems.rerollCount(player);
+		RerollItems.REROLL.trigger(player, golden, usedToken, retargetedMap, level, totalCount);
+
+		// Celebration: villager voice + particles around the merchant; gold gets the jackpot treatment.
+		if (golden) {
+			serverLevel.playSound(null, entity.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.NEUTRAL, 1.0F, 1.0F);
+			serverLevel.sendParticles(ParticleTypes.WAX_ON, entity.getX(), entity.getY() + 1.2, entity.getZ(), 40, 0.8, 0.6, 0.8, 0.05);
+			serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY() + 1.2, entity.getZ(), 12, 0.4, 0.5, 0.4, 0.0);
+			player.sendSystemMessage(Component.translatable("message." + MOD_ID + ".golden"), true);
+		} else {
+			serverLevel.playSound(null, entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+			serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY() + 1.2, entity.getZ(), 12, 0.4, 0.5, 0.4, 0.0);
+		}
+	}
+
+	/**
+	 * Golden reroll jackpot: one fresh offer is re-priced down to a single emerald, regardless
+	 * of level or reputation. Applied after updateSpecialPrices so it wins over reputation pricing.
+	 */
+	private static void makeElite(final MerchantOffers offers, final RandomSource random) {
+		List<MerchantOffer> candidates = new ArrayList<>();
+		for (MerchantOffer offer : offers) {
+			if (offer.getBaseCostA().getCount() >= 2) {
+				candidates.add(offer);
+			}
+		}
+		if (candidates.isEmpty()) {
+			return;
+		}
+		MerchantOffer elite = candidates.get(random.nextInt(candidates.size()));
+		elite.setSpecialPriceDiff(1 - elite.getBaseCostA().getCount());
+	}
+
+	/** Finds and consumes one reroll token from anywhere in the player's inventory (incl. offhand). */
+	private static boolean consumeToken(final ServerPlayer player) {
+		for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+			ItemStack stack = player.getInventory().getItem(slot);
+			if (stack.is(RerollItems.REROLL_TOKEN)) {
+				stack.consume(1, player);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static boolean hasTradeSets(final VillagerProfession profession, final int level) {

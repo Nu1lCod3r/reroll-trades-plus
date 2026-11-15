@@ -1,5 +1,6 @@
 package com.nullcoder.rerollplusplus.mixin;
 
+import com.nullcoder.rerollplusplus.RerollConfig;
 import com.nullcoder.rerollplusplus.RerollTradesPlus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,6 +34,9 @@ public class EnchantmentMenuMixin {
 	@Inject(method = "clickMenuButton", at = @At("HEAD"), cancellable = true)
 	private void rerollTradesPlus$onMenuButton(final Player player, final int buttonId, final CallbackInfoReturnable<Boolean> cir) {
 		if (buttonId != rerollTradesPlus$REROLL_BUTTON_ID) {
+			return;
+		}
+		if (!RerollConfig.INSTANCE.enableEnchantReroll) {
 			return;
 		}
 

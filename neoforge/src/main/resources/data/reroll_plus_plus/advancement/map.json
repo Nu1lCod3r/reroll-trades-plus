@@ -1,0 +1,28 @@
+{
+	"parent": "reroll_plus_plus:root",
+	"criteria": {
+		"rerolled": {
+			"trigger": "reroll_plus_plus:reroll",
+			"conditions": {
+				"retargeted_map": true
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:ocean_monument_map"
+		},
+		"frame": "goal",
+		"title": {
+			"translate": "advancements.reroll_plus_plus.map.title"
+		},
+		"description": {
+			"translate": "advancements.reroll_plus_plus.map.description"
+		}
+	},
+	"requirements": [
+		[
+			"rerolled"
+		]
+	]
+}

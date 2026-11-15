@@ -7,5 +7,21 @@
 	"message.reroll_plus_plus.no_trades": "This villager has no trades to reroll",
 	"message.reroll_plus_plus.not_enough_emeralds": "Not enough emeralds to reroll (need %s)",
 	"message.reroll_plus_plus.refused": "The merchant refuses to reroll their trades!",
-	"message.reroll_plus_plus.need_lapis": "Put lapis lazuli into the enchanting table to reroll"
+	"message.reroll_plus_plus.need_lapis": "Put lapis lazuli into the enchanting table to reroll",
+	"message.reroll_plus_plus.golden": "Golden reroll! The merchant offers the deal of a lifetime!",
+	"message.reroll_plus_plus.token_refusal": "You show the merchant a reroll token — they agree!",
+	"message.reroll_plus_plus.token_used": "The reroll token covers the cost!",
+	"item.reroll_plus_plus.reroll_token": "Reroll Token",
+	"advancements.reroll_plus_plus.root.title": "Reroll Plus Plus",
+	"advancements.reroll_plus_plus.root.description": "Reroll trades and enchantments — fresh offers for a price",
+	"advancements.reroll_plus_plus.master.title": "Merchant's Nightmare",
+	"advancements.reroll_plus_plus.master.description": "Reroll the trades of a Master villager",
+	"advancements.reroll_plus_plus.golden.title": "Jackpot!",
+	"advancements.reroll_plus_plus.golden.description": "Hit the golden reroll",
+	"advancements.reroll_plus_plus.hundred.title": "Hard to Please",
+	"advancements.reroll_plus_plus.hundred.description": "Reroll 100 times",
+	"advancements.reroll_plus_plus.token.title": "Ace Up the Sleeve",
+	"advancements.reroll_plus_plus.token.description": "Rescue a failing reroll with a reroll token",
+	"advancements.reroll_plus_plus.map.title": "Off the Beaten Path",
+	"advancements.reroll_plus_plus.map.description": "Reroll a cartographer's map so it points somewhere new"
 }

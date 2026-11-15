@@ -1,0 +1,31 @@
+{
+	"parent": "reroll_plus_plus:root",
+	"criteria": {
+		"rerolled": {
+			"trigger": "reroll_plus_plus:reroll",
+			"conditions": {
+				"golden": true
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:golden_apple"
+		},
+		"frame": "challenge",
+		"title": {
+			"translate": "advancements.reroll_plus_plus.golden.title"
+		},
+		"description": {
+			"translate": "advancements.reroll_plus_plus.golden.description"
+		}
+	},
+	"requirements": [
+		[
+			"rerolled"
+		]
+	],
+	"rewards": {
+		"experience": 50
+	}
+}

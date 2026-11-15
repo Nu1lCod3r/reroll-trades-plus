@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		"EAE",
+		"ABA",
+		"EAE"
+	],
+	"key": {
+		"E": "minecraft:emerald",
+		"A": "minecraft:amethyst_shard",
+		"B": "minecraft:book"
+	},
+	"result": {
+		"id": "reroll_plus_plus:reroll_token"
+	}
+}

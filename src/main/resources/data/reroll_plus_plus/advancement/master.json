@@ -1,0 +1,30 @@
+{
+	"parent": "reroll_plus_plus:root",
+	"criteria": {
+		"rerolled": {
+			"trigger": "reroll_plus_plus:reroll",
+			"conditions": {
+				"level": {
+					"min": 5
+				}
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:emerald_block"
+		},
+		"frame": "goal",
+		"title": {
+			"translate": "advancements.reroll_plus_plus.master.title"
+		},
+		"description": {
+			"translate": "advancements.reroll_plus_plus.master.description"
+		}
+	},
+	"requirements": [
+		[
+			"rerolled"
+		]
+	]
+}

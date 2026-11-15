@@ -43,7 +43,8 @@ public class RerollButton extends AbstractButton {
 
 	@Override
 	public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float partialTicks) {
-		int cost = RerollCost.forLevel(this.menu.getTraderLevel());
+		// Server-synced price: includes merchant fatigue, not just the base table.
+		int cost = RerollTradesPlusClient.rerollPrice(this.menu.containerId, this.menu.getTraderLevel());
 		this.active = RerollCost.countEmeralds(Minecraft.getInstance().player.getInventory()) >= cost;
 
 		int frame;
